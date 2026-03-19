@@ -1,39 +1,79 @@
-## Baseline Performance Analysis
+# Performance Report (Baseline - Slow Version)
 
-### Observations from Chrome DevTools Performance Panel
+## Lighthouse Metrics
 
-1. **Network Waterfall Issue**
-- Observed a long continuous network activity spanning ~40 seconds.
-- Indicates sequential API calls (N+1 problem).
-- Each request waits for the previous one to complete.
-- This significantly delays data availability.
-
-2. **Main Thread Blocking**
-- Total main thread time ~41 seconds.
-- Continuous scripting and system tasks observed.
-- Multiple long tasks present, blocking UI responsiveness.
-
-3. **Excessive Re-rendering**
-- Large number of small scripting blocks in flame chart.
-- Caused by rendering 500 DOM nodes simultaneously.
-- Filtering and sorting trigger full re-renders.
-
-4. **Expensive Computations**
-- Repeated date formatting (`toLocaleString`) visible in scripting time.
-- Executed for every item on each render.
-
-5. **Heavy Initial Load**
-- Hero image contributes to rendering delay.
-- No optimization applied.
+| Metric | Score |
+|--------|------|
+| Performance Score | 33 |
+| First Contentful Paint (FCP) | 7.0s |
+| Largest Contentful Paint (LCP) | 10.2s |
+| Total Blocking Time (TBT) | 1410ms |
+| Cumulative Layout Shift (CLS) | 0 |
 
 ---
 
-### Key Issues Identified
+## Analysis of Metrics
 
-| Issue | Impact |
-|------|--------|
-| Network Waterfall | Very slow data loading |
-| No Virtualization | Large DOM, poor performance |
-| Full Lodash Import | Increased bundle size |
-| Expensive Computation | Increased scripting time |
-| Unoptimized Image | Poor LCP |
+- Very poor performance score (33) indicates significant performance issues.
+- High LCP (10.2s) due to large unoptimized hero image and slow data loading.
+- High TBT (1410ms) indicates main thread blocking caused by rendering 500 items and expensive computations.
+- High FCP (7.0s) due to delayed content rendering from sequential API calls.
+- CLS is currently low because layout shifts are minimal, but lack of image dimensions can cause instability in other scenarios.
+
+---
+
+## Observations
+
+### 1. Network Waterfall
+- 500 API requests executed sequentially.
+- Large delay in data loading (~30–40 seconds).
+- Caused by loop with await inside.
+
+### 2. Large DOM Size
+- Rendering 500+ articles at once.
+- Increases memory usage and slows rendering.
+
+### 3. Expensive Computation
+- `toLocaleString()` runs for each item on every render.
+- Increases scripting time.
+
+### 4. Unoptimized Image
+- Large hero image without optimization.
+- Affects LCP significantly.
+
+### 5. Heavy JavaScript Execution
+- Full lodash library is imported.
+- Increases bundle size and parsing time.
+
+---
+
+## Root Cause Analysis
+
+| Issue | Cause |
+|------|------|
+| Slow loading | Sequential API calls (network waterfall) |
+| High LCP | Large unoptimized hero image |
+| High TBT | Rendering 500 items + expensive computations |
+| High FCP | Delayed initial rendering |
+| Large bundle size | Full lodash import |
+
+---
+
+## Proposed Solutions
+
+| Issue | Solution |
+|------|---------|
+| Network waterfall | Use Promise.all for parallel API requests |
+| Large DOM size | Implement list virtualization |
+| Expensive computation | Use useMemo or reuse formatter |
+| Image issue | Compress image, use WebP, add width/height/srcset |
+| Bundle size | Use modular lodash imports |
+
+---
+
+## Chrome DevTools Analysis
+
+- Observed long main thread activity (~40 seconds).
+- Sequential network requests clearly visible in the performance timeline.
+- Multiple scripting blocks due to repeated rendering and filtering.
+- UI becomes unresponsive during interactions like typing and sorting.
